@@ -1,43 +1,48 @@
 import mysql.connector
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 class Database:
     def __init__(self):
-        self.host = os.getenv('host')
-        self.user = os.getenv('user')
-        self.password = os.getenv('password')   
-        self.database = os.getenv('database')
-        self.connect()
-
-    def connect(self):
         try:
             self.connection = mysql.connector.connect(
-                host=self.host,
-                user=self.user,
-                password=self.password,
-                database=self.database
+                host=os.getenv("host"),
+                user=os.getenv("user"),
+                password=os.getenv("password"),
+                database=os.getenv("database")
             )
-            print("Database connection successful.")
+            self.cursor = self.connection.cursor(dictionary=True)
         except mysql.connector.Error as err:
             print(f"Error connecting to database: {err}")
+            self.connection = None
 
-    def disconnect(self):
-        if self.connection:
-            self.connection.close()
-            print("Database connection closed.")
-
-    def execute_query(self, query):
+    def execute(self, query, values=None, fetch=False):
         if not self.connection:
             print("No database connection.")
             return None
-        cursor = self.connection.cursor()
+
         try:
-            cursor.execute(query)
+            self.cursor.execute(query, values)
+
+            if fetch:
+                return self.cursor.fetchall()
+
             self.connection.commit()
-            results = cursor.fetchall()
-            return results
+            return True
+
         except mysql.connector.Error as err:
-            print(f"Error executing query: {err}")
+            print(f"Database error: {err}")
             return False
+
+    def close(self):
+        if self.connection and self.connection.is_connected():
+            self.cursor.close()
+            self.connection.close()
+            print("Database connection closed.")
+
+
+if __name__ == "__main__":
+    db = Database()
+    db.close()
